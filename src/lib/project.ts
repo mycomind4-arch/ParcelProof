@@ -18,7 +18,10 @@ const checklist: Array<{
   { category: 'hazards', title: 'Hazard and environmental overlays', purpose: 'Checks flood, fire, seismic, coastal, and habitat constraints.', required: false },
 ]
 
+const evidenceStatuses = new Set(['not-started', 'requested', 'verified', 'missing', 'conflict'])
+const evidenceCategories = new Set(checklist.map((item) => item.category))
 const makeId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`
+const isString = (value: unknown): value is string => typeof value === 'string'
 
 export function createProject(input: Pick<ParcelProject, 'name' | 'address' | 'apn' | 'jurisdiction'>): ParcelProject {
   const now = new Date().toISOString()
@@ -44,14 +47,41 @@ export function createProject(input: Pick<ParcelProject, 'name' | 'address' | 'a
   }
 }
 
+function isEvidenceItem(value: unknown): value is EvidenceItem {
+  if (!value || typeof value !== 'object') return false
+  const item = value as Partial<EvidenceItem>
+  return Boolean(
+    isString(item.id) &&
+    isString(item.category) && evidenceCategories.has(item.category as EvidenceCategory) &&
+    isString(item.title) &&
+    isString(item.purpose) &&
+    isString(item.status) && evidenceStatuses.has(item.status) &&
+    isString(item.agency) &&
+    isString(item.sourceUrl) &&
+    isString(item.referenceNumber) &&
+    isString(item.recordDate) &&
+    isString(item.notes) &&
+    typeof item.required === 'boolean' &&
+    isString(item.updatedAt),
+  )
+}
+
 export function isParcelProject(value: unknown): value is ParcelProject {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<ParcelProject>
   return Boolean(
-    typeof candidate.id === 'string' &&
-    typeof candidate.name === 'string' &&
-    typeof candidate.apn === 'string' &&
+    isString(candidate.id) &&
+    isString(candidate.name) &&
+    isString(candidate.address) &&
+    isString(candidate.apn) &&
+    isString(candidate.jurisdiction) &&
+    isString(candidate.propertyType) &&
+    isString(candidate.intendedUse) &&
+    isString(candidate.analystNotes) &&
+    isString(candidate.createdAt) &&
+    isString(candidate.updatedAt) &&
     Array.isArray(candidate.evidence) &&
-    candidate.evidence.every((item) => item && typeof item.id === 'string' && typeof item.status === 'string'),
+    candidate.evidence.length > 0 &&
+    candidate.evidence.every(isEvidenceItem),
   )
 }
