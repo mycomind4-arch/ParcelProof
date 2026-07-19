@@ -29,7 +29,31 @@ describe('analyzeProject', () => {
     const project = newProject()
     project.evidence.filter((item) => item.required).forEach((item) => { item.status = 'verified' })
     expect(analyzeProject(project).decision).toBe('REVIEW REQUIRED')
-    project.evidence.filter((item) => item.required).forEach((item) => { item.referenceNumber = `REF-${item.id}` })
+
+    project.evidence.filter((item) => item.required).forEach((item) => {
+      item.referenceNumber = `REF-${item.id}`
+      item.agency = 'County records office'
+      item.recordDate = '2026-07-18'
+    })
+    expect(analyzeProject(project).decision).toBe('EVIDENCE COMPLETE')
+  })
+
+  it('requires custodian and record dates for required verified evidence', () => {
+    const project = newProject()
+    project.evidence.filter((item) => item.required).forEach((item) => {
+      item.status = 'verified'
+      item.referenceNumber = `REF-${item.id}`
+    })
+
+    const withoutProvenance = analyzeProject(project)
+    expect(withoutProvenance.decision).toBe('REVIEW REQUIRED')
+    expect(withoutProvenance.findings.some((finding) => finding.title.includes('needs a responsible source'))).toBe(true)
+    expect(withoutProvenance.findings.some((finding) => finding.title.includes('needs a record date'))).toBe(true)
+
+    project.evidence.filter((item) => item.required).forEach((item) => {
+      item.agency = 'County records office'
+      item.recordDate = '2026-07-18'
+    })
     expect(analyzeProject(project).decision).toBe('EVIDENCE COMPLETE')
   })
 })
