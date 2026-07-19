@@ -51,15 +51,37 @@ export function analyzeProject(project: ParcelProject): ProjectAnalysis {
         category: item.category,
       })
     }
+
+    if (item.status === 'verified' && !item.agency.trim()) {
+      findings.push({
+        id: `agency-${item.id}`,
+        severity: 'attention',
+        title: `${item.title} needs a responsible source`,
+        detail: 'Record the agency, office, or custodian responsible for the cited evidence.',
+        category: item.category,
+      })
+    }
+
+    if (item.status === 'verified' && !item.recordDate) {
+      findings.push({
+        id: `date-${item.id}`,
+        severity: 'attention',
+        title: `${item.title} needs a record date`,
+        detail: 'Record the date shown on the source so reviewers can distinguish current and superseded evidence.',
+        category: item.category,
+      })
+    }
   })
 
   const critical = findings.some((finding) => finding.severity === 'critical')
   const requiredComplete = project.evidence.filter((item) => item.required).every((item) => item.status === 'verified')
-  const traceable = project.evidence.filter((item) => item.status === 'verified').every((item) => item.sourceUrl || item.referenceNumber)
+  const provenanceComplete = project.evidence
+    .filter((item) => item.status === 'verified')
+    .every((item) => Boolean((item.sourceUrl || item.referenceNumber) && item.agency.trim() && item.recordDate))
 
   let decision: ProjectAnalysis['decision'] = 'INSUFFICIENT EVIDENCE'
   if (!critical && completeness >= 65) decision = 'REVIEW REQUIRED'
-  if (requiredComplete && traceable && !critical) decision = 'EVIDENCE COMPLETE'
+  if (requiredComplete && provenanceComplete && !critical) decision = 'EVIDENCE COMPLETE'
 
   if (findings.length === 0) {
     findings.push({
